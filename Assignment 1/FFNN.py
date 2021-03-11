@@ -46,5 +46,35 @@ class softmax():
     def grad(self, x):  
         pass    
 
+
+## LOSS FUNCTIONS
+class crossEntropy():
+    def __init__(self):
+        pass
+    def loss(self,y_pred,y_true):
+        n = len(y_pred)
+        y_true_1 = [np.where(temp == 1) for temp in y_true]
+        loss = np.array([-np.log(y_pred[i][y_true_1[i]]) for i in range(n)])
+        return loss
+    def loss_grad(self,y_pred,y_true):
+        loss_grad = y_pred - y_true
+        return loss_grad
+     
+class meanSq():
+    def __init__(self):
+        pass
+    def solve(self,a,b):
+        c = a - b
+        d = c*a
+        s = np.sum(d)
+        return d - s*a    
+    def loss(self,y_pred,y_true):
+        loss = 0.5*np.sum(np.square(y_pred-y_true),axis=1)
+        return loss    
+    def loss_grad(self,y_pred,y_true):
+        n = len(y_pred)
+        loss_grad = np.array([self.solve(y_pred[i],y_true[i]) for i in range(n)])
+        return loss_grad
+
 class layer():
 class nn():
