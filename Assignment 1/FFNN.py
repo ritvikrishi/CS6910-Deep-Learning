@@ -45,3 +45,6 @@ class softmax():
 
     def grad(self, x):  
         pass    
+
+class layer():
+class nn():
