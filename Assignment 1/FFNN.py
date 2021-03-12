@@ -1,5 +1,10 @@
 import numpy as np
 import pandas as pd
+import time
+from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
+from keras.datasets import fashion_mnist
+np.random.seed(0)
 
 
 # ACTIVATION FUNCTIONS
@@ -39,7 +44,7 @@ class softmax():
     def activate(self, x):
         out = np.zeros(x.shape)
         for i in range(0, x.shape[0]):
-            exps = np.exp(x[i])
+            exps = np.exp(x[i]- np.max(x[i]))
             out[i] = exps / np.sum(exps)        
         return out
 
@@ -55,7 +60,7 @@ class crossEntropy():
         n = len(y_pred)
         y_true_1 = [np.where(temp == 1) for temp in y_true]
         loss = np.array([-np.log(y_pred[i][y_true_1[i]]) for i in range(n)])
-        return loss
+        return np.mean(loss)
     def loss_grad(self,y_pred,y_true):
         loss_grad = y_pred - y_true
         return loss_grad
@@ -70,7 +75,7 @@ class meanSq():
         return d - s*a    
     def loss(self,y_pred,y_true):
         loss = 0.5*np.sum(np.square(y_pred-y_true),axis=1)
-        return loss    
+        return np.mean(loss)    
     def loss_grad(self,y_pred,y_true):
         n = len(y_pred)
         loss_grad = np.array([self.solve(y_pred[i],y_true[i]) for i in range(n)])
@@ -103,8 +108,6 @@ class layer():
       self.b = np.zeros(self.curr_n)
 
     def get_grad_w(self,a,b):
-      #c=np.einsum("ij,ik->ikj",a,b)
-      #d=np.mean(c,axis=0)
       c = np.dot(b.T, a)
       return c
 
@@ -213,27 +216,30 @@ class nn():
           grad_a=layer.bkwd(grad_a,self.network[0].get_a(),self.network[0].get_act(),i)
         layer.update_wb(t)
 
-    def fit(self,X,y):
+    def fit(self,X,y, Xval, yval):
       for ep in range(self.epochs):
+        X, y = shuffle(X, y, random_state=ep)
         for i in range(0,X.shape[0],self.batch_size):
           x_batch = X[i:i + self.batch_size]
           y_batch = y[i:i + self.batch_size]
           self.fit_batch(x_batch, y_batch,(i/self.batch_size))
         y_true = self.process_y(y)
-        acc_log=(np.mean(self.predict(X).argmax(axis=-1)==y_true.argmax(axis=-1)))
+        acc_t=(np.mean(self.predict(X).argmax(axis=-1)==y_true.argmax(axis=-1)))
+        y_pval = self.predict(Xval)
+        y_tval = self.process_y(yval)
+        acc_v=(np.mean(y_pval.argmax(axis=-1)==y_tval.argmax(axis=-1)))
         #print(y_true)
-        print(f"Epoch: {ep+1}, Accuracy: {acc_log}")
+        print(f"Epoch: {ep+1}, Train accuracy: {acc_t}, Val accuracy : {acc_v}")
     
     def predict(self,X):
       y_pred = self.forward(X)
-      #print(y_pred)
-      #prob=self.network[-1].h
       return y_pred
     
     def evaluate(self, y_pred, y_true):
         y_true = self.process_y(y_true)
         acc=(np.mean(y_pred.argmax(axis=-1)==y_true.argmax(axis=-1)))
-        return acc
+        loss = self.loss_function.loss(y_pred,y_true)
+        return acc, loss
     
 ## WEIGHT INITIALIZER
 class randwb():
@@ -396,3 +402,36 @@ class nadamOptim():
         b = b - (self.eta/(np.sqrt(v_db_hat+self.epsilon)))*(m_db_m)
         return w, b
 
+
+
+# Get training and testing vectors 
+(trainX, trainy), (testX, testy) = fashion_mnist.load_data()
+
+trainX = trainX.reshape(60000, 784)/255.0
+testX = testX.reshape(10000, 784)/255.0
+
+X_train, X_val, y_train, y_val = train_test_split(trainX, trainy, test_size=0.1, random_state=0)
+
+# CREATING THE NEURAL NETWORK
+act_fn = 'relu'
+neuronlist = [[64, act_fn], [64, act_fn], [64, act_fn]]
+
+parameters = dict(input_size = 784, output_size = 10, neuronlist = neuronlist,
+                  batch_size = 32, epochs = 5, optimizer = 'adam', loss_function = 'crossentropy',
+                  learning_rate = 0.001, wb_initializer = 'xavier', weight_decay = 0.0005)
+
+# TRAINING
+t1 = time.time()
+fnn = nn(**parameters)
+fnn.fit(X_train, y_train, X_val, y_val)
+t2 = time.time()
+print("\nTime taken to train: "+str(t2-t1))
+
+y_pred = fnn.predict(X_val)
+acc, loss = fnn.evaluate(y_pred, y_val)
+print("Validation accuracy: "+str(acc)+', Val loss:' +str(loss))
+
+# TESTING for model trained on 90% data
+y_t = fnn.predict(testX)
+acc, loss= fnn.evaluate(y_t, testy)
+print("Test accuracy: "+str(acc)+', test loss: '+str(loss))
