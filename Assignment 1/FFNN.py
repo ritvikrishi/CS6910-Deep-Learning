@@ -247,3 +247,64 @@ class xavier():
     pass
   def init_w(self, prev_n, curr_n):
     return np.random.normal(0,np.sqrt(6/(prev_n+curr_n)),(prev_n, curr_n))
+
+##  OPTIMIZERS
+class SGDOptim():
+    def __init__(self, eta=0.01, wd = 0):
+        self.eta = eta
+        self.wd = wd
+        self.name = 'sgd'
+
+    def update(self, w, b, dw, db, t=0):
+        ## dw, db are from current minibatch
+        ## update weights and biases
+        w = w - self.eta*(dw) - self.eta*(self.wd)*(w)
+        b = b - self.eta*(db) 
+        return w, b
+
+class MomentGDOptim():
+    def __init__(self, eta=0.01, gamma=0.9, wd=0):
+        self.v_w, self.v_b = 0, 0
+        self.gamma = gamma
+        self.eta = eta
+        self.wd = wd
+        self.name = 'mgd'
+
+    def update(self, w, b, dw, db, t=0):
+        ## dw, db are from current minibatch
+        ## momentum 
+        self.v_w = self.gamma*self.v_w + self.eta*dw
+        self.v_b = self.gamma*self.v_b + self.eta*db
+
+        ## update weights and biases
+        w = w - self.v_w - self.eta*(self.wd)*(w)
+        b = b - self.v_b 
+        return w, b
+
+class NAGDOptim():
+    def __init__(self, eta=0.01, gamma=0.9, wd=0):
+        self.v_w, self.v_b = 0, 0
+        self.prev_vw, self.prev_vb = 0,0
+        self.gamma = gamma
+        self.eta = eta
+        self.wd = wd
+        self.name = 'nag'
+
+    def partial(self):
+        self.v_w = self.gamma*self.prev_vw
+        self.v_b = self.gamma*self.prev_vb
+        return self.v_w, self.v_b
+
+    def update(self, w, b, dw, db, t=0):
+        ## dw, db are from current minibatch
+        ## momentum 
+        self.v_w = self.gamma*self.prev_vw + self.eta*dw
+        self.v_b = self.gamma*self.prev_vb + self.eta*db
+        
+        ## update weights and biases
+        w = w - self.eta*dw - self.eta*(self.wd)*(w)
+        b = b - self.eta*db
+
+        ##
+        self.prev_vw, self.prev_vb = self.v_w, self.v_b
+        return w, b
