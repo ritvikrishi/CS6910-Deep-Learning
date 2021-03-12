@@ -235,3 +235,15 @@ class nn():
         acc=(np.mean(y_pred.argmax(axis=-1)==y_true.argmax(axis=-1)))
         return acc
     
+## WEIGHT INITIALIZER
+class randwb():
+  def __init__(self):
+    pass
+  def init_w(self, prev_n, curr_n):
+    return np.random.randn(prev_n, curr_n)
+
+class xavier():
+  def __init__(self):
+    pass
+  def init_w(self, prev_n, curr_n):
+    return np.random.normal(0,np.sqrt(6/(prev_n+curr_n)),(prev_n, curr_n))
