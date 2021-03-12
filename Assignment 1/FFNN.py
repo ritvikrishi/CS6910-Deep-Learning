@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd
+# import pandas as pd
 import time
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
@@ -202,7 +202,6 @@ class nn():
     def fit_batch(self,X,y,t):
       y_pred=self.forward(X)
       y_true=self.process_y(y)
-      loss=self.loss_function.loss(y_pred,y_true)
       grad_a=self.loss_function.loss_grad(y_pred,y_true)
       for i in range(len(self.network)-1,-1,-1):
         layer=self.network[i]
@@ -229,8 +228,19 @@ class nn():
         y_tval = self.process_y(yval)
         acc_v=(np.mean(y_pval.argmax(axis=-1)==y_tval.argmax(axis=-1)))
         #print(y_true)
-        print(f"Epoch: {ep+1}, Train accuracy: {acc_t}, Val accuracy : {acc_v}")
+        print("Epoch: "+str(ep+1)+", Train accuracy: "+str(acc_t)+" Val accuracy : "+str(acc_v))
     
+    def fit_epoch(self, X, y, epoch):
+        X, y = shuffle(X, y, random_state=epoch)
+        for i in range(0,X.shape[0],self.batch_size):
+          x_batch = X[i:i + self.batch_size]
+          y_batch = y[i:i + self.batch_size]
+          self.fit_batch(x_batch, y_batch,(i/self.batch_size))
+        y_true = self.process_y(y)
+        acc_t=(np.mean(self.predict(X).argmax(axis=-1)==y_true.argmax(axis=-1)))
+        #print(y_true)
+        print("Epoch: "+str(epoch+1)+", Train accuracy: "+str(acc_t))
+
     def predict(self,X):
       y_pred = self.forward(X)
       return y_pred
@@ -239,7 +249,11 @@ class nn():
         y_true = self.process_y(y_true)
         acc=(np.mean(y_pred.argmax(axis=-1)==y_true.argmax(axis=-1)))
         loss = self.loss_function.loss(y_pred,y_true)
-        return acc, loss
+        l2reg = 0
+        for layer in self.network:
+            l2reg += self.wd*np.sum(np.square(layer.w))
+        l2reg = l2reg/(2.0 * y_true.shape[0])
+        return acc, loss+l2reg
     
 ## WEIGHT INITIALIZER
 class randwb():
@@ -404,34 +418,38 @@ class nadamOptim():
 
 
 
-# Get training and testing vectors 
-(trainX, trainy), (testX, testy) = fashion_mnist.load_data()
 
-trainX = trainX.reshape(60000, 784)/255.0
-testX = testX.reshape(10000, 784)/255.0
+# # Get training and testing vectors 
+# (trainX, trainy), (testX, testy) = fashion_mnist.load_data()
 
-X_train, X_val, y_train, y_val = train_test_split(trainX, trainy, test_size=0.1, random_state=0)
+# trainX = trainX.reshape(60000, 784)/255.0
+# testX = testX.reshape(10000, 784)/255.0
 
-# CREATING THE NEURAL NETWORK
-act_fn = 'relu'
-neuronlist = [[64, act_fn], [64, act_fn], [64, act_fn]]
+# X_train, X_val, y_train, y_val = train_test_split(trainX, trainy, test_size=0.1, random_state=0)
 
-parameters = dict(input_size = 784, output_size = 10, neuronlist = neuronlist,
-                  batch_size = 32, epochs = 5, optimizer = 'adam', loss_function = 'crossentropy',
-                  learning_rate = 0.001, wb_initializer = 'xavier', weight_decay = 0.0005)
+# Training and testing
+def traintest():
+    neuronlist = []
+    for i in range(3):
+        neuronlist.append([64, 'tanh'])
+    parameters = dict(input_size = 784, output_size = 10, neuronlist = neuronlist,
+                  batch_size = 32, epochs = 5, optimizer = 'adam',
+                  learning_rate = 0.001, wb_initializer = 'xavier', weight_decay = 0.0005,
+                  loss_function = 'crossentropy')
+        
+    fnn = nn(**parameters)
+    (trainX, trainy), (testX, testy) = fashion_mnist.load_data()
+    trainX = trainX.reshape(60000, 784)/256
+    testX = testX.reshape(10000, 784)/256
+    X_train, X_val, y_train, y_val = train_test_split(trainX, trainy, test_size=0.1, random_state=0)
 
-# TRAINING
-t1 = time.time()
-fnn = nn(**parameters)
-fnn.fit(X_train, y_train, X_val, y_val)
-t2 = time.time()
-print("\nTime taken to train: "+str(t2-t1))
+    for epoch in range(5):
+        fnn.fit_epoch(X_train, y_train, epoch)
+        y_vpred = fnn.predict(X_val)
+        val_acc, val_loss = fnn.evaluate(y_vpred, y_val)
+        print("Validation accuracy: "+str(val_acc)+', Val loss:' +str(val_loss))
+        y_tpred = fnn.predict(testX)
+        acc, loss = fnn.evaluate(y_tpred, testy)
+        print("Test accuracy: "+str(acc)+', test loss:' +str(loss))
 
-y_pred = fnn.predict(X_val)
-acc, loss = fnn.evaluate(y_pred, y_val)
-print("Validation accuracy: "+str(acc)+', Val loss:' +str(loss))
-
-# TESTING for model trained on 90% data
-y_t = fnn.predict(testX)
-acc, loss= fnn.evaluate(y_t, testy)
-print("Test accuracy: "+str(acc)+', test loss: '+str(loss))
+traintest()
