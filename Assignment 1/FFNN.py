@@ -308,3 +308,91 @@ class NAGDOptim():
         ##
         self.prev_vw, self.prev_vb = self.v_w, self.v_b
         return w, b
+
+class RMSOptim():
+    def __init__(self, eta=0.1, beta1=0.9, eps=1e-8, wd=0):
+        self.v_w, self.v_b = 0, 0
+        self.beta1 = beta1
+        self.eps = eps
+        self.eta = eta
+        self.wd = wd
+        self.name = 'rms'
+
+    def update(self, w, b, dw, db, t=0):
+        ## dw, db are from current minibatch
+        ## momentum beta 1
+        self.v_w = self.beta1*self.v_w + (1-self.beta1)*(dw**2)
+        self.v_b = self.beta1*self.v_b + (1-self.beta1)*(db**2)
+
+        ## update weights and biases
+        w = w - (self.eta/(np.sqrt(self.v_w+self.eps)))*dw - self.eta*(self.wd)*(w)
+        b = b - (self.eta/(np.sqrt(self.v_b+self.eps)))*db
+        return w, b
+
+class adamOptim():
+    def __init__(self, eta=0.01, beta1=0.9, beta2=0.999, epsilon=1e-8, wd=0):
+        self.m_dw, self.v_dw = 0, 0
+        self.m_db, self.v_db = 0, 0
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.eta = eta
+        self.wd = wd
+        self.name = 'adam'
+    def update(self, t, w, b, dw, db):
+        ## dw, db are from current minibatch
+        ## momentum beta 1
+        self.m_dw = self.beta1*self.m_dw + (1-self.beta1)*dw
+        self.m_db = self.beta1*self.m_db + (1-self.beta1)*db
+
+        ## rms beta 2
+        self.v_dw = self.beta2*self.v_dw + (1-self.beta2)*(dw**2)
+        self.v_db = self.beta2*self.v_db + (1-self.beta2)*(db**2)
+
+        ## bias correction
+        m_dw_hat = self.m_dw/(1-self.beta1**(t+1))
+        m_db_hat = self.m_db/(1-self.beta1**(t+1))
+        v_dw_hat = self.v_dw/(1-self.beta2**(t+1))
+        v_db_hat = self.v_db/(1-self.beta2**(t+1))
+
+        ## update weights and biases
+        w = w - (self.eta/(np.sqrt(v_dw_hat+self.epsilon)))*(m_dw_hat) - self.eta*(self.wd)*(w)
+        b = b - (self.eta/(np.sqrt(v_db_hat+self.epsilon)))*(m_db_hat)
+        return w, b
+
+class nadamOptim():
+    def __init__(self, eta=0.01, beta1=0.9, beta2=0.999, epsilon=1e-8, wd = 0):
+        self.m_dw, self.v_dw = 0, 0
+        self.m_db, self.v_db = 0, 0
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.eta = eta
+        self.wd = wd
+        self.name='nadam'
+
+    def update(self, t, w, b, dw, db):
+        ## dw, db are from current minibatch
+        ## momentum beta 1
+        self.m_dw = self.beta1*self.m_dw + (1-self.beta1)*dw
+        self.m_db = self.beta1*self.m_db + (1-self.beta1)*db
+
+        ## rms beta 2
+        self.v_dw = self.beta2*self.v_dw + (1-self.beta2)*(dw**2)
+        self.v_db = self.beta2*self.v_db + (1-self.beta2)*(db**2)
+
+        ## bias correction
+        m_dw_hat = self.m_dw/(1-self.beta1**(t+1))
+        m_db_hat = self.m_db/(1-self.beta1**(t+1))
+        v_dw_hat = self.v_dw/(1-self.beta2**(t+1))
+        v_db_hat = self.v_db/(1-self.beta2**(t+1))
+
+        ## nesterov
+        m_dw_m = self.beta1*m_dw_hat + ((1-self.beta1)*(dw))/(1-self.beta1**(t+1))
+        m_db_m = self.beta1*m_db_hat + ((1-self.beta1)*(db))/(1-self.beta1**(t+1))
+
+        ## update weights and biases
+        w = w - (self.eta/(np.sqrt(v_dw_hat+self.epsilon)))*(m_dw_m) - self.eta*(self.wd)*(w)
+        b = b - (self.eta/(np.sqrt(v_db_hat+self.epsilon)))*(m_db_m)
+        return w, b
+
