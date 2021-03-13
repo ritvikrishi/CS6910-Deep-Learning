@@ -433,14 +433,14 @@ def traintest():
     for i in range(3):
         neuronlist.append([64, 'tanh'])
     parameters = dict(input_size = 784, output_size = 10, neuronlist = neuronlist,
-                  batch_size = 32, epochs = 5, optimizer = 'adam',
+                  batch_size = 32, epochs = 5, optimizer = 'rms',
                   learning_rate = 0.001, wb_initializer = 'xavier', weight_decay = 0.0005,
                   loss_function = 'crossentropy')
         
     fnn = nn(**parameters)
     (trainX, trainy), (testX, testy) = fashion_mnist.load_data()
-    trainX = trainX.reshape(60000, 784)/256
-    testX = testX.reshape(10000, 784)/256
+    trainX = trainX.reshape(60000, 784)/255.0
+    testX = testX.reshape(10000, 784)/255.0
     X_train, X_val, y_train, y_val = train_test_split(trainX, trainy, test_size=0.1, random_state=0)
 
     for epoch in range(5):
@@ -453,3 +453,78 @@ def traintest():
         print("Test accuracy: "+str(acc)+', test loss:' +str(loss))
 
 traintest()
+
+
+# #############################################
+# # HYPERPARAMETER TUNINING USING WANDB SWEEP #
+# #############################################
+
+# import wandb
+# wandb.login()
+
+# sweep_config = {
+#     'method': 'RANDOM', #grid, random, bayes
+#     'metric': {
+#       'name': 'val_loss',
+#       'goal': 'minimize'   
+#     },
+#     'parameters': {
+#         'epochs': {
+#             'values': [5, 10]
+#         },
+#         'num_layers': {
+#             'values': [3, 4, 5]
+#         }
+#         'layer_size': {
+#             'values': [16, 32, 64]
+#         },
+#         'weight_decay': {
+#             'values': [0, 0.0005, 0.5]
+#         },
+#         'learning_rate': {
+#             'values': [1e-3, 1e-4]
+#         },
+#         'optimizer': {
+#             'values': ['nadam', 'adam', 'rms', 'nag', 'mgd', 'sgd']
+#         },
+#         'batch_size': {
+#             'values': [64, 32, 16]
+#         },
+#         'wb_initializer':{
+#             'values': ['random', 'xavier']
+#         },
+#         'activation': {
+#             'values': ['sigmoid', 'relu', 'tanh']
+#         }
+#     }
+# }
+
+# sweep_id = wandb.sweep(sweep_config, project="cs6910-a1")
+
+# def train(config=None):
+#     with wandb.init(config = config):
+#         config = wandb.config
+#         neuronlist = []
+#         for i in range(config.num_layers):
+#             neuronlist.append([config.layer_size, config.activation])
+#         parameters = dict(input_size = 784, output_size = 10, neuronlist = neuronlist,
+#                   batch_size = config.batch_size, epochs = config.epochs, optimizer = config.optimizer,
+#                   learning_rate = config.learning_rate, wb_initializer = config.wb_initializer, weight_decay = config.weight_decay,
+#                   loss_function = 'crossentropy')
+#         wandb.run.name = 'hn-'+str(config.num_layers)+'_hs-'+str(config.layer_size)+'_a-'+config.activation+'_bs-'+str(config.batch_size)+'_o-'+config.optimizer
+#         fnn = nn(**parameters)
+#         (trainX, trainy), (testX, testy) = fashion_mnist.load_data()
+#         trainX = trainX.reshape(60000, 784)/255.0
+#         testX = testX.reshape(10000, 784)/255.0
+#         X_train, X_val, y_train, y_val = train_test_split(trainX, trainy, test_size=0.1, random_state=0)
+#         for epoch in range(config.epochs):
+#             fnn.fit_epoch(X_train, y_train, epoch)
+#             y_vpred = fnn.predict(X_val)
+#             val_acc, val_loss = fnn.evaluate(y_vpred, y_val)
+#             y_tpred = fnn.predict(testX)
+#             acc, loss = fnn.evaluate(y_tpred, testy)
+#             wandb.log({'val_loss': val_loss, 'val_accuracy': val_acc, 
+#                        'loss': loss, 'accuracy': acc, 'epoch': epoch+1})
+
+# # Running wandb sweep for 25 runs
+# wandb.agent(sweep_id, train, count=25)
