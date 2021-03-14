@@ -80,7 +80,7 @@ class meanSq():
         n = len(y_pred)
         loss_grad = np.array([self.solve(y_pred[i],y_true[i]) for i in range(n)])
         return loss_grad
-
+## LAYER CLASS
 class layer():
     def __init__(self,inp,out,act,wbinit, optimizer, eta, wd):
       self.prev_n=inp
@@ -89,6 +89,8 @@ class layer():
       self.wb_initializer=wbinit
       self.wd = wd
       self.grad_w, self.grad_b = 0,0
+
+#### FOR ADDING NEW OPTIMIZERS, JUST HAVE TO INCUDE ITS CLASS AND APPEND IN THE IF ELSE LADDER.
       if optimizer=='sgd':
         self.optimizer = SGDOptim(eta = eta, wd = self.wd)
       elif optimizer=='mgd':
@@ -106,7 +108,7 @@ class layer():
     def initialize_wb(self):
       self.w = self.wb_initializer.init_w(self.prev_n,self.curr_n)
       self.b = np.zeros(self.curr_n)
-
+### These functions have been either replaced or placed inline in bkwd function.
     def get_grad_w(self,a,b):
       c = np.dot(b.T, a)
       return c
@@ -125,13 +127,14 @@ class layer():
     
     def get_derivs(self,a,act):
       return act.grad(a)
-    
+
+    ##FORWARD PROPOGATION FUNCTION
     def frwd(self,inputs):
       self.input=inputs
       self.a = np.dot(self.input,self.w)+self.b
       self.h = self.activation.activate(self.a)
       return self.h
-
+    ##BACKWARD PROPOGATION FUNCTION
     def bkwd(self,grad_a,prev_layer_a,prev_act,i):
       self.grad_w += self.get_grad_w(grad_a,self.input)
       #self.grad_b=np.mean(grad_a,axis=0)
@@ -154,7 +157,7 @@ class layer():
     def get_a(self):
       return self.a
 
-
+##NEURAL NETWORK CLASS
 class nn():
     def __init__(self,input_size,output_size,neuronlist,batch_size,epochs,optimizer,loss_function,learning_rate,wb_initializer, weight_decay):
       self.network=[]
@@ -166,7 +169,7 @@ class nn():
       fl=[[input_size,'dummystr']]+neuronlist+[[output_size,'softmax']]
 
       self.optimizer = optimizer
-
+#### FOR ADDING NEW OPTIMIZERS OR ACTIVATION FUNCTIONS, JUST HAVE TO INCUDE ITS CLASS AND APPEND IN THE IF ELSE LADDER.
       if loss_function=='crossentropy':
         self.loss_function=crossEntropy()
       elif loss_function=='meansq':
