@@ -120,7 +120,66 @@ history = model.fit(train_ds,  validation_data=val_ds, epochs=epochs)
 # plt.title('Training and Validation Loss')
 # plt.show()
 
+# #SWEEPS ON WANDB
+# wandb.login()
+# sweep_config = {
+#     'method': 'random', #'bayes'
+#     'metric': {
+#         'name': 'val_loss',
+#         'goal': 'minimise'
+#     },
+#     'parameters': {
+#         'epochs': {
+#             'values': [20]
+#         },
+#         'nFil': {
+#             'values': [256, 512]
+#         },
+#         'filFac':{
+#             'values': [0.707, 0.5]
+#         },
+#         'isBN': {
+#             'values': [True]
+#         },
+#         'isDA': {
+#             'values': [False]
+#         },
+#         'dropout': {
+#             'values': [0.2, 0.3]
+#         },
+#         'denseN': {
+#             'values': [256]
+#         },
+#         'ksize1': {
+#             'values': [3]
+#         },
+#         'ksize2': {
+#             'values': [3]
+#         },
+#         'optimizer': {
+#             'values': ['adam', 'adamax', 'nadam', 'rmsprop']
+#         }
+#      }
+# }
 
+# sweep_id = wandb.sweep(sweep_config, project="cs6910-a2")
+
+# def wandb_train(config=None):
+#     with wandb.init(config = config):
+#         config = wandb.config
+#         nFilters = [config.nFil, config.nFil, config.nFil, config.nFil, config.nFil]
+#         ksize = [config.ksize1, config.ksize2, 3,3,3]
+#         parameters = dict(nFilters=nFilters, ksize=ksize, filterFac=config.filFac, isDataAug=config.isDA, 
+#                          dropout = config.dropout, isBN= config.isBN, denseN=config.denseN)
+#         tf.keras.backend.clear_session()
+#         model = buildCNN(**parameters)
+#         runname = str(config.nFil)+'_ksz.'+str(config.ksize1)+'.'+str(config.ksize2)+ '_opt.'+str(config.optimizer)
+#         runname += '_drop.'+str(config.dropout)+'_ds.'+str(config.denseN)
+#         wandb.run.name = runname
+#         model.compile(optimizer = config.optimizer, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=['accuracy'])
+#         model.fit(train_ds, validation_data = val_ds, epochs=config.epochs, callbacks=[WandbCallback()])
+
+# wandb.agent(sweep_id, wandb_train, count=5)
 
 
 #################################################
