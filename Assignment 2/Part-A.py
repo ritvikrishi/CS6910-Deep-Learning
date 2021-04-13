@@ -87,7 +87,7 @@ def buildCNN(nFilters, ksize=[3,3,3,3,3], filterFac=1, isDataAug=False, dropout=
     return model
 
 # manual training
-nFilters = [64, 64, 64, 32, 32]
+nFilters = [256, 128, 64, 32, 32]
 ksize=[3,3,3,3,3]
 epochs=10
 tf.keras.backend.clear_session()
@@ -119,3 +119,55 @@ history = model.fit(train_ds,  validation_data=val_ds, epochs=epochs)
 # plt.legend(loc='upper right')
 # plt.title('Training and Validation Loss')
 # plt.show()
+
+
+
+
+#################################################
+# TESTING AND VISUALISATION     
+
+model.evaluate(test_ds)
+
+
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from numpy import expand_dims
+from tensorflow.keras.models import Model
+
+# Plots images with predicted and true labels
+def plotImgLabel(model, test_ds, wandb=False):
+    i=0
+    fig, ax = plt.subplots(nrows=10, ncols=3, figsize=(12,40))
+    fig.tight_layout()
+    for img, label in test_ds.take(10):
+        for j in range(3):
+            img_array = keras.preprocessing.image.img_to_array(img[j])
+            img_array = tf.expand_dims(img_array, 0) 
+            predictions = model.predict(img_array)
+            score = tf.nn.softmax(predictions[0])
+            ax[i][j].imshow(img[j].numpy().astype("uint8"))
+            ax[i][j].axis("off")
+            ax[i][j].set_aspect("equal")
+            ax[i][j].set_title("Predicted: {} ({:.2f}% confidence)\n True: {}".format(class_names[np.argmax(score)], 100 * np.max(score), class_names[label[j]]))
+        i+=1
+
+# plots filters od first layer
+def plotFilters(model, test_ds, size):
+    for img, label in test_ds.take(1):
+        model1 = Model(inputs=model.inputs, outputs=model.layers[1].output)
+        img_array = img_to_array(img[0])
+        img_array = expand_dims(img_array, axis=0)
+
+        # get feature map for first hidden layer
+        feature_maps = model1.predict(img_array)
+        ix = 1
+        plt.figure(figsize=(40,40))
+        for _ in range(size):
+            for _ in range(size):
+                # specify subplot and turn of axis
+                ax = plt.subplot(size, size, ix)
+                ax.set_xticks([])
+                ax.set_yticks([])
+                plt.imshow(feature_maps[0, :, :, ix-1], cmap='gray')
+                ix+=1
+        # show the figure
+        plt.show()
