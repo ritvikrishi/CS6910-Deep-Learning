@@ -86,3 +86,35 @@ def preproc(model_name):
     datagen_kwarg=datagen_kwargs[model_name]
     dataflow_kwarg=dict(target_size=img_size,batch_size=BATCH_SIZE)
     return datagen_kwarg,dataflow_kwarg
+
+def transfer_learning(model_name,unfreeze_frac,do_data_augmentation,num_dense,train_num_epochs,finetune_num_epochs, callback=False, lr = 1e-6, dropout=0.2):
+    datagen_kwarg,dataflow_kwarg = preproc(model_name)
+
+    valid_datagen = tf.keras.preprocessing.image.ImageDataGenerator(**datagen_kwarg)
+    val_ds = valid_datagen.flow_from_directory(data_all, subset="validation", shuffle=False, **dataflow_kwarg)
+    if do_data_augmentation:
+        train_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
+            rotation_range=40,
+            horizontal_flip=True,
+            width_shift_range=0.2, height_shift_range=0.2,
+            shear_range=0.2, zoom_range=0.2,
+            **datagen_kwarg)
+    else:
+        train_datagen = valid_datagen
+    train_ds = train_datagen.flow_from_directory(data_all, subset="training", shuffle=True, **dataflow_kwarg)
+
+    base_model = get_base_model(model_name)
+    base_model.trainable = False
+    inp = keras.Input(shape=(model_pixel_map[model_name], model_pixel_map[model_name], 3))
+
+    x=base_model(inp,training=False)
+    x=keras.layers.GlobalAveragePooling2D()(x)
+    x=keras.layers.Dropout(dropout)(x)
+    x=keras.layers.Dense(num_dense,activation='relu')(x)
+    out=keras.layers.Dense(10, activation='softmax')(x)
+    model=keras.Model(inp,out)
+    model.compile(
+    optimizer=keras.optimizers.Adam(),
+    loss=keras.losses.CategoricalCrossentropy(from_logits=True),
+    metrics=['accuracy'],
+    )
