@@ -137,3 +137,55 @@ def transfer_learning(model_name,unfreeze_frac,do_data_augmentation,num_dense,tr
         model.fit(train_ds,epochs=finetune_num_epochs,validation_data=val_ds)
 
 #transfer_learning('InceptionV3',0.25,False,128,2,2)
+
+# # sweep config
+# wandb.login()
+# sweep_config = {
+#     'method': 'random', #'bayes'
+#     'metric': {
+#         'name': 'val_loss',
+#         'goal': 'minimise'
+#     },
+#     'parameters': {
+#         'epochpt': {
+#             'values': [3,4]
+#         },
+#         'epochft': {
+#             'values': [3,5,7]
+#         },
+#         'model': {
+#             'values': ["ResNet50","InceptionResNetV2", "InceptionV3", "Xception",
+#                         "Vgg19","Efficientnet_b3"]
+#         },
+#         'lr': {
+#             'values': [1e-5, 1e-6]
+#         },
+#         'densel': {
+#             'values': [128]
+#         },
+#         'finefrac': {
+#             'values': [0.25, 0.5, 1.0]
+#         },
+#         'dropout': {
+#             'values': [0.2, 0.3]
+#         },
+#         'isDA': {
+#             'values': [True, False]
+#         }
+#      }
+# }
+
+# sweep_id = wandb.sweep(sweep_config, project="cs6910-a2")
+# # faec06b836487726bad6a3ad69f3dde4f473646c
+
+# def wandb_train(config=None):
+#     with wandb.init(config = config):
+#         config = wandb.config
+#         tf.keras.backend.clear_session()
+#         transfer_learning(config.model, config.finefrac, config.isDA, config.densel, config.epochpt, config.epochft, True, config.lr, config.dropout)
+#         runname = str(config.model)+'_ff.'+str(config.finefrac)+ '_epochs.'+str(config.epochpt) + '.'+str(config.epochft)
+#         #runname += '_drop.'+str(config.dropout)+'_ds.'+str(config.denseN)
+#         wandb.run.name = runname
+
+# sweep_id = 'kk5ruac5'
+# wandb.agent(sweep_id, wandb_train, count=15)
