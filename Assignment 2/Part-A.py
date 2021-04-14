@@ -185,12 +185,15 @@ history = model.fit(train_ds,  validation_data=val_ds, epochs=epochs)
 #################################################
 # TESTING AND VISUALISATION     
 
+# model = keras.models.load_model("drive/MyDrive/Sem6/DLA2/model-best-A.h5")
+
 model.evaluate(test_ds)
 
 
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from numpy import expand_dims
 from tensorflow.keras.models import Model
+from tensorflow.keras import backend as K
 
 # Plots images with predicted and true labels
 def plotImgLabel(model, test_ds, wandb=False):
@@ -208,6 +211,8 @@ def plotImgLabel(model, test_ds, wandb=False):
             ax[i][j].set_aspect("equal")
             ax[i][j].set_title("Predicted: {} ({:.2f}% confidence)\n True: {}".format(class_names[np.argmax(score)], 100 * np.max(score), class_names[label[j]]))
         i+=1
+
+#plotImgLabel(model, test_ds)
 
 # plots filters od first layer
 def plotFilters(model, test_ds, size):
@@ -230,3 +235,76 @@ def plotFilters(model, test_ds, size):
                 ix+=1
         # show the figure
         plt.show()
+
+#plotFilters(model, test_ds, 16)
+
+
+###############################################
+#         GUIDED BACKPROPOGATION              #
+###############################################
+def deprocess_image(x):
+    """Same normalization as in:
+    https://github.com/fchollet/keras/blob/master/examples/conv_filter_visualization.py
+    """
+    # normalize tensor: center on 0., ensure std is 0.25
+    x = x.copy()
+    x -= x.mean()
+    x /= (x.std() + K.epsilon())
+    x *= 0.25
+    # clip to [0, 1]
+    x += 0.5
+    x = np.clip(x, 0, 1)
+    # convert to RGB array
+    x *= 255
+    if K.image_data_format() == 'channels_first':
+        x = x.transpose((1, 2, 0))
+    x = np.clip(x, 0, 255).astype('uint8')
+    return x
+
+def guidedBackprop(model, test_ds, layer_name, log = False):
+    # model till 5th convolutional layer
+    model_conv5 = Model(inputs = model.inputs, outputs = model.get_layer(layer_name).output)
+    #print(model_conv5.summary())
+
+    # creating a custom gradient (from stackoverflow)
+    @tf.custom_gradient
+    def guidedReLU(x):
+        def grad(dy):
+            return tf.cast(dy>0, "float32") * tf.cast(x>0, "float32") * dy
+        return tf.nn.relu(x), grad
+
+    # setting activation to guidedReLU
+    for layer in model.layers:
+        if hasattr(layer, 'activation') and layer.activation==tf.keras.activations.relu:
+            layer.activation = guidedReLU
+
+    # computing and plotting
+    fig, axs = plt.subplots(12, 1, figsize=(4, 44))
+    for img, label in test_ds.take(1):
+        img_array = tf.convert_to_tensor(img, dtype=tf.float32)
+        with tf.GradientTape() as tape:
+            inp = tf.expand_dims(img_array[0], 0)
+            tape.watch(inp)
+            out = model_conv5(inp)[0]
+        gradients = tape.gradient(out, inp)[0]
+        axs[0].set_title("Image")
+        axs[0].imshow(img_array[0]/255.0)
+        axs[0].axis("off")
+        axs[1].set_title("Guided-Backprop on full layer")
+        axs[1].imshow(np.flip(deprocess_image(np.array(gradients)),-1)) 
+        axs[1].axis("off")
+        for i in range(10):
+            with tf.GradientTape() as tape:
+                inp = tf.expand_dims(img_array[0], 0)
+                tape.watch(inp)
+                out = model_conv5(inp)[0,:,:,6*i]
+            gradients = tape.gradient(out, inp)[0]
+            axs[i+2].set_title("Guided-Backprop, neuron {}".format(6*i+1))
+            axs[i+2].imshow(np.flip(deprocess_image(np.array(gradients)),-1)) 
+            axs[i+2].axis("off")
+    if log == True:
+        wandb.log({"Guided" : plt})
+    plt.show()
+    
+# model = keras.models.load_model("drive/MyDrive/Sem6/DLA2/model-best-A.h5") # for colab
+# guidedBackprop(model, test_ds, "activation_4") #conv2d_4
