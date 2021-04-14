@@ -118,3 +118,22 @@ def transfer_learning(model_name,unfreeze_frac,do_data_augmentation,num_dense,tr
     loss=keras.losses.CategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'],
     )
+    if callback == True:
+        model.fit(train_ds,epochs=train_num_epochs,validation_data=val_ds, callbacks=[WandbCallback()])
+    else:
+        model.fit(train_ds,epochs=train_num_epochs,validation_data=val_ds)
+    
+    for layer in base_model.layers[-math.ceil((unfreeze_frac*(len(base_model.layers)))):]:
+      layer.trainable=True
+
+    model.compile(
+    optimizer=keras.optimizers.Adam(lr),
+    loss=keras.losses.CategoricalCrossentropy(from_logits=True),
+    metrics=['accuracy'],
+    )
+    if callback == True:
+        model.fit(train_ds,epochs=finetune_num_epochs,validation_data=val_ds, callbacks=[WandbCallback()])
+    else:
+        model.fit(train_ds,epochs=finetune_num_epochs,validation_data=val_ds)
+
+#transfer_learning('InceptionV3',0.25,False,128,2,2)
