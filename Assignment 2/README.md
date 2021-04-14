@@ -14,3 +14,15 @@ It is recommended to run the jupyter notebook for part A using google colab to u
 model-best-A.h5 contains the trained keras model with hyperparameter choices that performs best for this dataset.
 
 The accuracy obtained on running the best model on the test data was 42%.
+
+## Instructions to run Part B
+It is recommended to run the jupyter notebook for part B using google colab to utilise the freely available GPUs. 
+
+- Run all cells that import data and libraries and modules.
+- Run the cell which contains code for model dictionaries and compile the transfer learning function.
+- Run the function transfer_learning('model_name',(with other respective parameters)), which will train the respective model on the i-Naturalist dataset with the specifications regarding training,fine-tuning epochs and fine-tuning learning rate and unfreezing fraction as specified in the model and will output the Losses and Accuracies.
+- To get the sweep in WandB, uncomment the sweep code and add appropriate config values and run those cells.   
+
+
+model-best-B.h5 contains the trained keras model with hyperparameter choices that performs best for this dataset.
+The accuracy obtained on running the best model on the test data was 86%.
