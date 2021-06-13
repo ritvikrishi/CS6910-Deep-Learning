@@ -7,3 +7,6 @@ Implementing a feedforward neural network with backpropagation and testing it on
 ## Assignment 2:
 Using CNNs - training from scratch and fine-tuning pretrained models (EfficientNet, Xception, InceptionV3, InceptionResNetV2, ResNet50) for the 
 [inaturalist dataset](https://storage.googleapis.com/wandb_datasets/nature_12K.zip) .
+
+## Assignment 3:
+Using recurrent neural networks for a transliteration system. The model was tested on the [Dakshina dataset](https://github.com/google-research-datasets/dakshina) by Google.
